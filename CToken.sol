@@ -31,7 +31,6 @@ abstract contract CToken is
         ComptrollerInterface comptroller_,
         InterestRateModel interestRateModel_,
         uint256 initialExchangeRateMantissa_,
-        bytes32 pythPriceFeedId_,
         string memory name_,
         string memory symbol_,
         uint8 decimals_
@@ -60,9 +59,6 @@ abstract contract CToken is
         // Set the interest rate model (depends on block number / borrow index)
         err = _setInterestRateModelFresh(interestRateModel_);
         require(err == NO_ERROR, "setting interest rate model failed");
-
-        // Set pyth price feed ID
-        pythPriceFeedId = pythPriceFeedId_;
 
         name = name_;
         symbol = symbol_;

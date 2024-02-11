@@ -27,12 +27,11 @@ contract CErc20 is CToken, CErc20Interface {
                         ComptrollerInterface comptroller_,
                         InterestRateModel interestRateModel_,
                         uint initialExchangeRateMantissa_,
-                        bytes32 pythPriceFeedId_,
                         string memory name_,
                         string memory symbol_,
                         uint8 decimals_) public {
         // CToken initialize does the bulk of the work
-        super.initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, pythPriceFeedId_, name_, symbol_, decimals_);
+        super.initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_);
 
         // Set underlying and sanity check it
         underlying = underlying_;
