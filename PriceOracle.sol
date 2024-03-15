@@ -8,11 +8,11 @@ import "./Ownership/Ownable.sol";
 contract PriceOracle is Ownable {
     /// @notice Indicator that this is a PriceOracle contract (for inspection)
     bool public constant isPriceOracle = true;
+    uint256 public freshnessThreshold = 60;
 
     Pyth public oracle;
 
     mapping (address => bytes32) public getPythFeedIdFromAddress;
-    mapping (address => uint) public getUnderlyingDecimalsFromAddress;
 
     constructor(address pythOracleAddress) {
       oracle = Pyth(pythOracleAddress);
@@ -26,12 +26,8 @@ contract PriceOracle is Ownable {
       }
     }
 
-    function setUnderlyingDecimals(address[] memory tokenAddresses, uint[] memory decimals) public onlyOwner {
-      require(tokenAddresses.length == decimals.length, "Arrays must have the same length");
-
-      for (uint i = 0; i < tokenAddresses.length; i++) {
-        getUnderlyingDecimalsFromAddress[tokenAddresses[i]] = decimals[i];
-      }
+    function setFreshnessThreshold(uint256 _freshnessThreshold) public onlyOwner {
+      freshnessThreshold = _freshnessThreshold;
     }
 
     /**
@@ -43,11 +39,29 @@ contract PriceOracle is Ownable {
     function getUnderlyingPrice(CToken cToken) external view returns (uint256) {
       bytes32 pythPriceFeedId = getPythFeedIdFromAddress[address(cToken)];
       PythStructs.Price memory priceData = oracle.getPriceUnsafe(pythPriceFeedId);
+      require(block.timestamp - priceData.publishTime <= freshnessThreshold, "Stale prices");
 
-      uint256 price = uint256(uint64(priceData.price));
-      uint256 feedDecimals = 8;
-      uint underlyingDecials = getUnderlyingDecimalsFromAddress[address(cToken)];
+      return convertToUint(priceData, 18);
+    }
 
-      return price * 10**(36 - feedDecimals - underlyingDecials);
+    function convertToUint(
+      PythStructs.Price memory price,
+      uint8 targetDecimals
+    ) private pure returns (uint256) {
+      if (price.price < 0 || price.expo > 0 || price.expo < -255) {
+        revert();
+      }
+
+      uint8 priceDecimals = uint8(uint32(-1 * price.expo));
+
+      if (targetDecimals >= priceDecimals) {
+        return
+          uint(uint64(price.price)) *
+          10 ** uint32(targetDecimals - priceDecimals);
+      } else {
+        return
+          uint(uint64(price.price)) /
+          10 ** uint32(priceDecimals - targetDecimals);
+        }
     }
 }
